@@ -1,0 +1,472 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import math
+import re
+
+class SmartSolverApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("🧮 Умный Решатель - Python версия")
+        self.root.geometry("400x600")
+        self.root.configure(bg='#f0f0f0')
+        
+        # Стили
+        self.style = ttk.Style()
+        self.style.configure('TButton', font=('Arial', 12), padding=10)
+        self.style.configure('TLabel', font=('Arial', 12), background='#f0f0f0')
+        
+        self.create_gui()
+    
+    def create_gui(self):
+        # Основной контейнер
+        main_frame = ttk.Frame(self.root, padding="20")
+        main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Заголовок
+        title_label = ttk.Label(main_frame, 
+                               text="🧮 Умный Решатель", 
+                               font=('Arial', 20, 'bold'),
+                               foreground='#2c3e50')
+        title_label.pack(pady=10)
+        
+        subtitle_label = ttk.Label(main_frame, 
+                                  text="Математика • Физика • Геометрия • Информатика",
+                                  font=('Arial', 12),
+                                  foreground='#7f8c8d')
+        subtitle_label.pack(pady=5)
+        
+        # Поле ввода
+        input_frame = ttk.Frame(main_frame)
+        input_frame.pack(fill=tk.X, pady=10)
+        
+        ttk.Label(input_frame, text="Введите выражение:").pack(anchor='w')
+        self.entry = ttk.Entry(input_frame, font=('Arial', 14))
+        self.entry.pack(fill=tk.X, pady=5)
+        self.entry.bind('<Return>', lambda e: self.calculate())
+        
+        # Кнопки быстрого ввода
+        quick_buttons_frame = ttk.Frame(main_frame)
+        quick_buttons_frame.pack(fill=tk.X, pady=5)
+        
+        quick_buttons = [
+            '7', '8', '9', '+',
+            '4', '5', '6', '-', 
+            '1', '2', '3', '*',
+            '0', '.', '(', ')'
+        ]
+        
+        for i, btn in enumerate(quick_buttons):
+            row = i // 4
+            col = i % 4
+            ttk.Button(quick_buttons_frame, text=btn, 
+                      command=lambda b=btn: self.entry.insert(tk.END, b),
+                      width=4).grid(row=row, column=col, padx=2, pady=2)
+        
+        # Основные кнопки функций
+        functions_frame = ttk.LabelFrame(main_frame, text="Функции", padding=10)
+        functions_frame.pack(fill=tk.BOTH, expand=True, pady=10)
+        
+        # Сетка кнопок функций
+        functions = [
+            ("🧮 Математика", self.show_math),
+            ("⚡ Физика", self.show_physics),
+            ("📐 Геометрия", self.show_geometry),
+            ("💻 Информатика", self.show_computer_science),
+            ("🔄 Конвертер", self.show_converter),
+            ("📸 Фото-анализ", self.show_photo_analysis)
+        ]
+        
+        for i, (text, command) in enumerate(functions):
+            btn = ttk.Button(functions_frame, text=text, command=command)
+            btn.grid(row=i//2, column=i%2, sticky='ew', padx=5, pady=5)
+            functions_frame.columnconfigure(i%2, weight=1)
+        
+        # Кнопка расчета
+        ttk.Button(main_frame, text="Рассчитать", 
+                  command=self.calculate, 
+                  style='Accent.TButton').pack(fill=tk.X, pady=10)
+        
+        # Область результатов
+        result_frame = ttk.LabelFrame(main_frame, text="Результат", padding=10)
+        result_frame.pack(fill=tk.BOTH, expand=True)
+        
+        self.result_text = tk.Text(result_frame, height=8, font=('Arial', 11),
+                                  wrap=tk.WORD, bg='#f8f9fa', relief='flat')
+        scrollbar = ttk.Scrollbar(result_frame, orient='vertical', 
+                                 command=self.result_text.yview)
+        self.result_text.configure(yscrollcommand=scrollbar.set)
+        
+        self.result_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    
+    def calculate(self):
+        expression = self.entry.get().strip()
+        if not expression:
+            messagebox.showwarning("Внимание", "Введите выражение для расчета")
+            return
+        
+        try:
+            # Безопасное вычисление математических выражений
+            result = self.safe_eval(expression)
+            steps = f"Выражение: {expression}\n"
+            steps += f"Результат: {result}\n\n"
+            steps += f"Пошаговое решение:\n"
+            steps += f"{expression} = {result}"
+            
+            self.show_result(steps)
+            
+        except Exception as e:
+            messagebox.showerror("Ошибка", f"Не удалось вычислить выражение: {str(e)}")
+    
+    def safe_eval(self, expression):
+        """Безопасное вычисление математических выражений"""
+        # Замена символов
+        expression = expression.replace('²', '**2').replace('³', '**3')
+        expression = expression.replace('^', '**')
+        
+        # Разрешенные функции и константы
+        allowed_names = {
+            'sin': math.sin, 'cos': math.cos, 'tan': math.tan,
+            'sqrt': math.sqrt, 'log': math.log, 'log10': math.log10,
+            'exp': math.exp, 'pi': math.pi, 'e': math.e,
+            'abs': abs, 'round': round
+        }
+        
+        # Компиляция выражения
+        code = compile(expression, '<string>', 'eval')
+        
+        # Проверка допустимых имен
+        for name in code.co_names:
+            if name not in allowed_names:
+                raise ValueError(f"Использование '{name}' не разрешено")
+        
+        return eval(code, {"__builtins__": {}}, allowed_names)
+    
+    def show_math(self):
+        math_window = tk.Toplevel(self.root)
+        math_window.title("🧮 Математические вычисления")
+        math_window.geometry("400x300")
+        
+        ttk.Label(math_window, text="Примеры математических выражений:", 
+                 font=('Arial', 12, 'bold')).pack(pady=10)
+        
+        examples = [
+            "2 + 3 * 4",
+            "sin(pi/2)",
+            "sqrt(16)",
+            "2**3 + 4",
+            "(5 + 3) * 2"
+        ]
+        
+        for example in examples:
+            frame = ttk.Frame(math_window)
+            frame.pack(fill=tk.X, padx=20, pady=5)
+            ttk.Label(frame, text=example, width=20).pack(side=tk.LEFT)
+            ttk.Button(frame, text="Вставить", 
+                      command=lambda e=example: self.insert_example(e)).pack(side=tk.RIGHT)
+    
+    def show_physics(self):
+        physics_window = tk.Toplevel(self.root)
+        physics_window.title("⚡ Физические расчеты")
+        physics_window.geometry("400x400")
+        
+        notebook = ttk.Notebook(physics_window)
+        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Кинетическая энергия
+        kinetic_frame = ttk.Frame(notebook)
+        notebook.add(kinetic_frame, text="Кинетическая энергия")
+        
+        ttk.Label(kinetic_frame, text="E = ½mv²").pack(pady=10)
+        
+        ttk.Label(kinetic_frame, text="Масса (кг):").pack()
+        mass_entry = ttk.Entry(kinetic_frame)
+        mass_entry.pack(pady=5)
+        
+        ttk.Label(kinetic_frame, text="Скорость (м/с):").pack()
+        velocity_entry = ttk.Entry(kinetic_frame)
+        velocity_entry.pack(pady=5)
+        
+        def calc_kinetic():
+            try:
+                m = float(mass_entry.get())
+                v = float(velocity_entry.get())
+                result = 0.5 * m * v**2
+                messagebox.showinfo("Результат", f"Кинетическая энергия: {result:.2f} Дж")
+            except ValueError:
+                messagebox.showerror("Ошибка", "Введите корректные числа")
+        
+        ttk.Button(kinetic_frame, text="Рассчитать", 
+                  command=calc_kinetic).pack(pady=10)
+        
+        # Потенциальная энергия
+        potential_frame = ttk.Frame(notebook)
+        notebook.add(potential_frame, text="Потенциальная энергия")
+        
+        ttk.Label(potential_frame, text="E = mgh").pack(pady=10)
+        
+        ttk.Label(potential_frame, text="Масса (кг):").pack()
+        mass_p_entry = ttk.Entry(potential_frame)
+        mass_p_entry.pack(pady=5)
+        
+        ttk.Label(potential_frame, text="Высота (м):").pack()
+        height_entry = ttk.Entry(potential_frame)
+        height_entry.pack(pady=5)
+        
+        def calc_potential():
+            try:
+                m = float(mass_p_entry.get())
+                h = float(height_entry.get())
+                g = 9.81
+                result = m * g * h
+                messagebox.showinfo("Результат", f"Потенциальная энергия: {result:.2f} Дж")
+            except ValueError:
+                messagebox.showerror("Ошибка", "Введите корректные числа")
+        
+        ttk.Button(potential_frame, text="Рассчитать", 
+                  command=calc_potential).pack(pady=10)
+    
+    def show_geometry(self):
+        geometry_window = tk.Toplevel(self.root)
+        geometry_window.title("📐 Геометрические расчеты")
+        geometry_window.geometry("400x400")
+        
+        notebook = ttk.Notebook(geometry_window)
+        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Треугольник
+        triangle_frame = ttk.Frame(notebook)
+        notebook.add(triangle_frame, text="Треугольник")
+        
+        ttk.Label(triangle_frame, text="S = ½ × a × h").pack(pady=10)
+        
+        ttk.Label(triangle_frame, text="Основание:").pack()
+        base_entry = ttk.Entry(triangle_frame)
+        base_entry.pack(pady=5)
+        
+        ttk.Label(triangle_frame, text="Высота:").pack()
+        height_entry = ttk.Entry(triangle_frame)
+        height_entry.pack(pady=5)
+        
+        def calc_triangle():
+            try:
+                a = float(base_entry.get())
+                h = float(height_entry.get())
+                result = 0.5 * a * h
+                messagebox.showinfo("Результат", f"Площадь треугольника: {result:.2f}")
+            except ValueError:
+                messagebox.showerror("Ошибка", "Введите корректные числа")
+        
+        ttk.Button(triangle_frame, text="Рассчитать", 
+                  command=calc_triangle).pack(pady=10)
+        
+        # Круг
+        circle_frame = ttk.Frame(notebook)
+        notebook.add(circle_frame, text="Круг")
+        
+        ttk.Label(circle_frame, text="S = πr²").pack(pady=10)
+        
+        ttk.Label(circle_frame, text="Радиус:").pack()
+        radius_entry = ttk.Entry(circle_frame)
+        radius_entry.pack(pady=5)
+        
+        def calc_circle():
+            try:
+                r = float(radius_entry.get())
+                area = math.pi * r**2
+                circumference = 2 * math.pi * r
+                result = f"Площадь: {area:.2f}\nДлина окружности: {circumference:.2f}"
+                messagebox.showinfo("Результат", result)
+            except ValueError:
+                messagebox.showerror("Ошибка", "Введите корректное число")
+        
+        ttk.Button(circle_frame, text="Рассчитать", 
+                  command=calc_circle).pack(pady=10)
+    
+    def show_computer_science(self):
+        cs_window = tk.Toplevel(self.root)
+        cs_window.title("💻 Информатика")
+        cs_window.geometry("500x400")
+        
+        notebook = ttk.Notebook(cs_window)
+        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Двоичная система
+        binary_frame = ttk.Frame(notebook)
+        notebook.add(binary_frame, text="Двоичная система")
+        
+        ttk.Label(binary_frame, text="Перевод в двоичную систему:").pack(pady=10)
+        
+        ttk.Label(binary_frame, text="Десятичное число:").pack()
+        decimal_entry = ttk.Entry(binary_frame)
+        decimal_entry.pack(pady=5)
+        
+        result_label = ttk.Label(binary_frame, text="", background='white', 
+                                relief='sunken', padding=5)
+        result_label.pack(fill=tk.X, padx=20, pady=10)
+        
+        def convert_to_binary():
+            try:
+                decimal = int(decimal_entry.get())
+                binary = bin(decimal)[2:]
+                result_label.config(text=f"Десятичное: {decimal}\nДвоичное: {binary}")
+            except ValueError:
+                messagebox.showerror("Ошибка", "Введите целое число")
+        
+        ttk.Button(binary_frame, text="Конвертировать", 
+                  command=convert_to_binary).pack(pady=5)
+        
+        # Шестнадцатеричная система
+        hex_frame = ttk.Frame(notebook)
+        notebook.add(hex_frame, text="Шестнадцатеричная")
+        
+        ttk.Label(hex_frame, text="Перевод в шестнадцатеричную систему:").pack(pady=10)
+        
+        ttk.Label(hex_frame, text="Десятичное число:").pack()
+        decimal_hex_entry = ttk.Entry(hex_frame)
+        decimal_hex_entry.pack(pady=5)
+        
+        hex_result_label = ttk.Label(hex_frame, text="", background='white',
+                                   relief='sunken', padding=5)
+        hex_result_label.pack(fill=tk.X, padx=20, pady=10)
+        
+        def convert_to_hex():
+            try:
+                decimal = int(decimal_hex_entry.get())
+                hex_val = hex(decimal)[2:].upper()
+                hex_result_label.config(text=f"Десятичное: {decimal}\nШестнадцатеричное: {hex_val}")
+            except ValueError:
+                messagebox.showerror("Ошибка", "Введите целое число")
+        
+        ttk.Button(hex_frame, text="Конвертировать", 
+                  command=convert_to_hex).pack(pady=5)
+    
+    def show_converter(self):
+        converter_window = tk.Toplevel(self.root)
+        converter_window.title("🔄 Конвертер единиц")
+        converter_window.geometry("400x300")
+        
+        ttk.Label(converter_window, text="Выберите тип конвертации:").pack(pady=10)
+        
+        # Выбор категории
+        category_var = tk.StringVar(value="length")
+        ttk.Radiobutton(converter_window, text="Длина", 
+                       variable=category_var, value="length").pack()
+        ttk.Radiobutton(converter_window, text="Температура", 
+                       variable=category_var, value="temperature").pack()
+        
+        ttk.Label(converter_window, text="Значение:").pack(pady=5)
+        value_entry = ttk.Entry(converter_window)
+        value_entry.pack(pady=5)
+        
+        conversion_frame = ttk.Frame(converter_window)
+        conversion_frame.pack(pady=10)
+        
+        ttk.Label(conversion_frame, text="из:").grid(row=0, column=0, padx=5)
+        from_var = tk.StringVar()
+        from_combo = ttk.Combobox(conversion_frame, textvariable=from_var, width=10)
+        from_combo.grid(row=0, column=1, padx=5)
+        
+        ttk.Label(conversion_frame, text="в:").grid(row=0, column=2, padx=5)
+        to_var = tk.StringVar()
+        to_combo = ttk.Combobox(conversion_frame, textvariable=to_var, width=10)
+        to_combo.grid(row=0, column=3, padx=5)
+        
+        def update_units(*args):
+            category = category_var.get()
+            if category == "length":
+                units = ["m", "cm", "mm", "km"]
+                from_combo['values'] = units
+                to_combo['values'] = units
+                from_var.set("m")
+                to_var.set("cm")
+            elif category == "temperature":
+                units = ["C", "F", "K"]
+                from_combo['values'] = units
+                to_combo['values'] = units
+                from_var.set("C")
+                to_var.set("F")
+        
+        category_var.trace('w', update_units)
+        update_units()
+        
+        result_label = ttk.Label(converter_window, text="", background='white',
+                               relief='sunken', padding=5)
+        result_label.pack(fill=tk.X, padx=20, pady=10)
+        
+        def convert_units():
+            try:
+                value = float(value_entry.get())
+                from_unit = from_var.get()
+                to_unit = to_var.get()
+                category = category_var.get()
+                
+                result = value
+                
+                if category == "length":
+                    # Конвертация длины
+                    conversions = {
+                        ("m", "cm"): lambda x: x * 100,
+                        ("cm", "m"): lambda x: x / 100,
+                        ("m", "mm"): lambda x: x * 1000,
+                        ("mm", "m"): lambda x: x / 1000,
+                        ("km", "m"): lambda x: x * 1000,
+                        ("m", "km"): lambda x: x / 1000,
+                    }
+                    if (from_unit, to_unit) in conversions:
+                        result = conversions[(from_unit, to_unit)](value)
+                
+                elif category == "temperature":
+                    # Конвертация температуры
+                    if from_unit == "C" and to_unit == "F":
+                        result = (value * 9/5) + 32
+                    elif from_unit == "F" and to_unit == "C":
+                        result = (value - 32) * 5/9
+                    elif from_unit == "C" and to_unit == "K":
+                        result = value + 273.15
+                    elif from_unit == "K" and to_unit == "C":
+                        result = value - 273.15
+                
+                result_label.config(text=f"{value} {from_unit} = {result:.2f} {to_unit}")
+                
+            except ValueError:
+                messagebox.showerror("Ошибка", "Введите корректное число")
+        
+        ttk.Button(converter_window, text="Конвертировать", 
+                  command=convert_units).pack(pady=10)
+    
+    def show_photo_analysis(self):
+        messagebox.showinfo("📸 Фото-анализ", 
+                           "Функция фото-анализа эмулируется в этой версии.\n\n"
+                           "В реальной системе здесь будет:\n"
+                           "• Захват изображения с камеры\n"
+                           "• Распознавание текста (OCR)\n"
+                           "• Анализ и решение задачи\n\n"
+                           "Пример работы: введите математическое выражение в главном окне.")
+    
+    def insert_example(self, example):
+        self.entry.delete(0, tk.END)
+        self.entry.insert(0, example)
+        self.calculate()
+    
+    def show_result(self, text):
+        self.result_text.delete(1.0, tk.END)
+        self.result_text.insert(1.0, text)
+
+def main():
+    # Создание адаптивного интерфейса
+    root = tk.Tk()
+    
+    # Настройка для мобильных устройств (если нужно)
+    try:
+        from tkinter import font
+        default_font = font.nametofont("TkDefaultFont")
+        default_font.configure(size=12)
+    except:
+        pass
+    
+    app = SmartSolverApp(root)
+    root.mainloop()
+
+if __name__ == "__main__":
+    main()
